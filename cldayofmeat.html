@@ -1,11 +1,1 @@
-<!doctype html>
-<html>
-  <body style="margin:0;overflow:hidden">
-    <iframe
-      src="https://cdn.jsdelivr.net/gh/itsspeclix-gif/games@main/daymeat/index.html"
-      allow="autoplay; fullscreen; gamepad"
-      allowfullscreen
-      style="width:100vw;height:100vh;border:0">
-    </iframe>
-  </body>
-</html>
+javascript:(async()=>{const u='https://cdn.jsdelivr.net/gh/itsspeclix-gif/games@main/daymeat/';const h=await(await fetch(u+'index.html')).text();const b=new Blob([h.replace(/<head([^>]*)>/i,'<head$1><base href="'+u+'">')],{type:'text/html'});const f=document.createElement('iframe');f.src=URL.createObjectURL(b);Object.assign(f.style,{position:'fixed',inset:'0',width:'100vw',height:'100vh',border:'0',zIndex:'2147483647',background:'#000'});document.documentElement.appendChild(f)})()
