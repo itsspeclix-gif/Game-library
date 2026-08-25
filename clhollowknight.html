@@ -1,0 +1,43 @@
+<!doctype html>
+<html lang="en">
+<head>
+  <meta charset="utf-8">
+  <meta name="viewport" content="width=device-width, initial-scale=1">
+  <title>Hollow Knight</title>
+  <style>
+    html, body, iframe {
+      width: 100%;
+      height: 100%;
+      margin: 0;
+      border: 0;
+      overflow: hidden;
+      background: #000;
+    }
+  </style>
+</head>
+<body>
+  <script>
+    (async () => {
+      const baseUrl =
+        'https://cdn.jsdelivr.net/gh/itsspeclix-gif/games@main/';
+
+      const response = await fetch(baseUrl + 'index.html');
+      const html = await response.text();
+
+      const gameDocument = html.replace(
+        /<head([^>]*)>/i,
+        '<head$1><base href="' + baseUrl + '">'
+      );
+
+      const iframe = document.createElement('iframe');
+      iframe.src = URL.createObjectURL(
+        new Blob([gameDocument], { type: 'text/html' })
+      );
+      iframe.allow = 'autoplay; fullscreen; gamepad';
+      iframe.allowFullscreen = true;
+
+      document.body.appendChild(iframe);
+    })();
+  </script>
+</body>
+</html>
