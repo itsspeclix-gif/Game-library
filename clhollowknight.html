@@ -19,18 +19,23 @@
   <script>
     (async () => {
       const baseUrl =
-        'https://cdn.jsdelivr.net/gh/itsspeclix-gif/games@main/';
+        'https://cdn.jsdelivr.net/gh/itsspeclix-gif/games@6a7182b4457648c203aa33411d784c9cd30b774a/';
 
       const response = await fetch(
-        baseUrl + 'index.html?v=4',
+        baseUrl + 'index.html',
         { cache: 'no-store' }
       );
       const html = await response.text();
 
-      const gameDocument = html.replace(
-        /<head([^>]*)>/i,
-        '<head$1><base href="' + baseUrl + '">'
-      );
+      const gameDocument = html
+        .replaceAll(
+          'https://cdn.jsdelivr.net/gh/itsspeclix-gif/games@main/',
+          baseUrl
+        )
+        .replace(
+          /<head([^>]*)>/i,
+          '<head$1><base href="' + baseUrl + '">'
+        );
 
       const iframe = document.createElement('iframe');
       iframe.src = URL.createObjectURL(
