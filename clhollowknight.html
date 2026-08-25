@@ -21,7 +21,10 @@
       const baseUrl =
         'https://cdn.jsdelivr.net/gh/itsspeclix-gif/games@main/';
 
-      const response = await fetch(baseUrl + 'index.html');
+      const response = await fetch(
+        baseUrl + 'index.html?v=2',
+        { cache: 'no-store' }
+      );
       const html = await response.text();
 
       const gameDocument = html.replace(
