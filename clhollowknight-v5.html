@@ -19,7 +19,7 @@
   <script>
     (async () => {
       const baseUrl =
-        'https://cdn.jsdelivr.net/gh/itsspeclix-gif/games@be276da276c91638c1ff2b82c754133e0fdbdad8/';
+        'https://cdn.jsdelivr.net/gh/itsspeclix-gif/games@d776aef07fb3ef5cd278d70c6f54742b27dd2f6d/';
 
       const response = await fetch(
         baseUrl + 'index.html',
@@ -40,9 +40,14 @@
           '<head$1><base href="' + baseUrl + '">'
         );
 
-      document.open();
-      document.write(gameDocument);
-      document.close();
+      const iframe = document.createElement('iframe');
+      iframe.src = URL.createObjectURL(
+        new Blob([gameDocument], { type: 'text/html' })
+      );
+      iframe.allow = 'autoplay; fullscreen; gamepad';
+      iframe.allowFullscreen = true;
+
+      document.body.appendChild(iframe);
     })();
   </script>
 </body>
