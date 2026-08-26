@@ -19,12 +19,15 @@
   <script>
     (async () => {
       const baseUrl =
-        'https://cdn.jsdelivr.net/gh/itsspeclix-gif/games@6a7182b4457648c203aa33411d784c9cd30b774a/';
+        'https://cdn.jsdelivr.net/gh/itsspeclix-gif/games@be276da276c91638c1ff2b82c754133e0fdbdad8/';
 
       const response = await fetch(
         baseUrl + 'index.html',
         { cache: 'no-store' }
       );
+      if (!response.ok) {
+        throw new Error(`Could not load Hollow Knight (${response.status})`);
+      }
       const html = await response.text();
 
       const gameDocument = html
@@ -37,14 +40,9 @@
           '<head$1><base href="' + baseUrl + '">'
         );
 
-      const iframe = document.createElement('iframe');
-      iframe.src = URL.createObjectURL(
-        new Blob([gameDocument], { type: 'text/html' })
-      );
-      iframe.allow = 'autoplay; fullscreen; gamepad';
-      iframe.allowFullscreen = true;
-
-      document.body.appendChild(iframe);
+      document.open();
+      document.write(gameDocument);
+      document.close();
     })();
   </script>
 </body>
