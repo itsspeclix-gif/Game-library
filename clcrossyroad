@@ -1,0 +1,78 @@
+<!doctype html>
+<html lang="en">
+<head>
+  <meta charset="utf-8">
+  <meta
+    name="viewport"
+    content="width=device-width, initial-scale=1, user-scalable=no"
+  >
+  <title>Crossy Road</title>
+
+  <style>
+    html, body, iframe {
+      width: 100%;
+      height: 100%;
+      margin: 0;
+      padding: 0;
+      border: 0;
+      overflow: hidden;
+      background: #000;
+    }
+  </style>
+</head>
+
+<body>
+<script>
+(() => {
+  const baseUrl =
+    'https://cdn.jsdelivr.net/gh/itsspeclix-gif/games@main/CrossyRoad/';
+
+  const gameDocument = `
+<!doctype html>
+<html>
+<head>
+  <meta charset="utf-8">
+  <meta
+    name="viewport"
+    content="width=device-width, initial-scale=1, user-scalable=no"
+  >
+
+  <base href="${baseUrl}">
+
+  <style>
+    html, body {
+      width: 100%;
+      height: 100%;
+      margin: 0;
+      padding: 0;
+      overflow: hidden;
+      background: #000;
+    }
+  </style>
+</head>
+
+<body>
+  <script src="scripts/three.min.js"><\/script>
+  <script src="scripts/asset-loader.min.js"><\/script>
+  <script src="scripts/bootstrap.min.js"><\/script>
+  <script src="scripts/game.min.js"><\/script>
+</body>
+</html>
+`;
+
+  const blob = new Blob(
+    [gameDocument],
+    { type: 'text/html' }
+  );
+
+  const iframe = document.createElement('iframe');
+
+  iframe.src = URL.createObjectURL(blob);
+  iframe.allow = 'autoplay; fullscreen; gamepad';
+  iframe.allowFullscreen = true;
+
+  document.body.appendChild(iframe);
+})();
+</script>
+</body>
+</html>
