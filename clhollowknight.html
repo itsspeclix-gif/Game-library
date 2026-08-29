@@ -1015,7 +1015,7 @@
 
     indexHtml = indexHtml.replace(
       /devicePixelRatio\s*:\s*isIOS\s*\?\s*1\s*:\s*window\.devicePixelRatio/,
-      'devicePixelRatio: ' + (ACTUAL_IOS ? '0.80' : '1')
+      'devicePixelRatio: 1'
     );
 
     const iosStart = indexHtml.indexOf('const isIOS');
