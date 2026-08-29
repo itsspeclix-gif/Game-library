@@ -1,0 +1,89 @@
+<!doctype html>
+<html lang="en">
+<head>
+  <meta charset="utf-8">
+  <meta
+    name="viewport"
+    content="width=device-width, initial-scale=1"
+  >
+
+  <title>Buckshot Roulette</title>
+
+  <style>
+    html,
+    body,
+    iframe {
+      width: 100%;
+      height: 100%;
+      margin: 0;
+      padding: 0;
+      border: 0;
+      overflow: hidden;
+      background: #000;
+    }
+  </style>
+</head>
+
+<body>
+
+<script>
+(async () => {
+  const baseUrl =
+    "https://cdn.jsdelivr.net/gh/itsspeclix-gif/games@main/buckshot/";
+
+  try {
+    const response =
+      await fetch(baseUrl + "index.html");
+
+    if (!response.ok) {
+      throw new Error(
+        "Failed to load Buckshot: HTTP " +
+        response.status
+      );
+    }
+
+    let html = await response.text();
+
+    html = html.replace(
+      /<head([^>]*)>/i,
+      '<head$1><base href="' +
+        baseUrl +
+        '">'
+    );
+
+    const blobUrl = URL.createObjectURL(
+      new Blob(
+        [html],
+        { type: "text/html" }
+      )
+    );
+
+    const iframe =
+      document.createElement("iframe");
+
+    iframe.src = blobUrl;
+
+    iframe.allow =
+      "autoplay; fullscreen; gamepad";
+
+    iframe.allowFullscreen = true;
+
+    document.body.appendChild(iframe);
+  } catch (err) {
+    console.error(err);
+
+    document.body.innerHTML =
+      '<div style="' +
+      'color:white;' +
+      'font-family:Arial,sans-serif;' +
+      'padding:20px;' +
+      '">' +
+      'Failed to load Buckshot Roulette.<br><br>' +
+      String(err) +
+      '</div>';
+  }
+})();
+</script>
+
+</body>
+</html>
