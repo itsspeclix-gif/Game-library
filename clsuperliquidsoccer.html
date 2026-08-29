@@ -1,0 +1,84 @@
+<!doctype html>
+<html lang="en">
+<head>
+  <meta charset="utf-8">
+  <meta name="viewport" content="width=device-width, initial-scale=1">
+  <title>Super Liquid Soccer</title>
+  <style>
+    html, body, iframe {
+      width: 100%;
+      height: 100%;
+      margin: 0;
+      border: 0;
+      overflow: hidden;
+      background: #000;
+    }
+  </style>
+</head>
+<body>
+<script>
+(async () => {
+  const baseUrl =
+    'https://cdn.jsdelivr.net/gh/itsspeclix-gif/games@main/superliquidsoccer/';
+
+  const response = await fetch(baseUrl + 'index.html');
+  if (!response.ok) {
+    throw new Error('index.html HTTP ' + response.status);
+  }
+
+  let html = await response.text();
+
+  // Make index.js, index.pck and index.wasm resolve from the game folder.
+  html = html.replace(
+    /<head([^>]*)>/i,
+    '<head$1><base href="' + baseUrl + '">'
+  );
+
+  // The original export expects /poki-sdk.js, which is not in this folder.
+  // Give the game the minimal Poki API it expects.
+  html = html.replace(
+    /<script\s+src=["']\/poki-sdk\.js["']\s*><\/script>/i,
+    `<script>
+      window.PokiSDK = new Proxy({
+        init: () => Promise.resolve(),
+        gameLoadingStart: () => {},
+        gameLoadingFinished: () => {},
+        gameplayStart: () => {},
+        gameplayStop: () => {},
+        commercialBreak: () => Promise.resolve(),
+        rewardedBreak: () => Promise.resolve(true),
+        happyTime: () => {},
+        setDebug: () => {}
+      }, {
+        get(target, prop) {
+          if (prop in target) return target[prop];
+          return () => Promise.resolve();
+        }
+      });
+    <\/script>`
+  );
+
+  // This export references a service worker that is not in the repo.
+  html = html.replace(
+    /"serviceWorker"\s*:\s*"index\.service\.worker\.js"/,
+    '"serviceWorker": ""'
+  );
+
+  // Remove the unrelated Cloudflare analytics beacon from the copied page.
+  html = html.replace(
+    /<script[^>]*static\.cloudflareinsights\.com[\s\S]*?<\/script>/gi,
+    ''
+  );
+
+  const iframe = document.createElement('iframe');
+  iframe.src = URL.createObjectURL(
+    new Blob([html], { type: 'text/html' })
+  );
+  iframe.allow = 'autoplay; fullscreen; gamepad';
+  iframe.allowFullscreen = true;
+
+  document.body.appendChild(iframe);
+})();
+</script>
+</body>
+</html>
