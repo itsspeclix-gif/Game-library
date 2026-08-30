@@ -1,0 +1,69 @@
+<!doctype html>
+<html lang="en">
+<head>
+  <meta charset="utf-8">
+  <meta name="viewport" content="width=device-width, initial-scale=1">
+  <title>Hollow Knight</title>
+  <style>
+    html, body, iframe {
+      width: 100%;
+      height: 100%;
+      margin: 0;
+      border: 0;
+      overflow: hidden;
+      background: #000;
+    }
+  </style>
+</head>
+<body>
+  <script>
+    (async () => {
+      const baseUrl =
+        'https://cdn.jsdelivr.net/gh/itsspeclix-gif/games@main/hollowknight/';
+
+      try {
+        // The shell is tiny, so always ask for a fresh @main copy. Heavy data
+        // files remain normally cacheable because only index.html is busted.
+        const response = await fetch(
+          baseUrl + 'index.html?launch=' + Date.now(),
+          { cache: 'no-store' }
+        );
+
+        if (!response.ok) {
+          throw new Error('Hollow Knight index HTTP ' + response.status);
+        }
+
+        const html = await response.text();
+        const gameDocument = html.replace(
+          /<head([^>]*)>/i,
+          '<head$1><base href="' + baseUrl + '">'
+        );
+
+        const objectUrl = URL.createObjectURL(
+          new Blob([gameDocument], { type: 'text/html' })
+        );
+
+        const iframe = document.createElement('iframe');
+        iframe.src = objectUrl;
+        iframe.allow = 'autoplay; fullscreen; gamepad';
+        iframe.allowFullscreen = true;
+        iframe.addEventListener(
+          'load',
+          () => URL.revokeObjectURL(objectUrl),
+          { once: true }
+        );
+
+        document.body.appendChild(iframe);
+      } catch (error) {
+        console.error(error);
+        document.body.textContent =
+          'Unable to launch Hollow Knight: ' +
+          (error && error.message ? error.message : String(error));
+        document.body.style.cssText =
+          'margin:0;display:grid;place-items:center;background:#000;color:#fff;' +
+          'font:16px system-ui,sans-serif;text-align:center;padding:24px;box-sizing:border-box;';
+      }
+    })();
+  </script>
+</body>
+</html>
