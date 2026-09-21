@@ -23,7 +23,7 @@
   <div id="status" role="status" aria-live="polite">
     <strong>Kingdom Rush Frontiers</strong>
     <span id="message">Loading Ruffle…</span>
-    <small>KRF-Ruffle 2026.09.20-r1</small>
+    <small>KRF-Ruffle 2026.09.20-r2</small>
   </div>
   <script>
   (async () => {
@@ -39,8 +39,67 @@
     const totalBytes = 58867747;
     const status = document.getElementById("status");
     const message = document.getElementById("message");
-    let stage = "Ruffle script";
+    let stage = "Save isolation";
     try {
+      // BEGIN FRONTIERS SAVE ISOLATION
+      // Keep this prefix stable across launcher versions. Never import the shared KR keys.
+      const savePrefix = "GameLibrary:ruffle:kingdom-rush-frontiers:";
+      const rawStorage = window.localStorage;
+      const saveKeys = () => Object.keys(rawStorage)
+        .filter(key => key.startsWith(savePrefix))
+        .map(key => key.slice(savePrefix.length));
+      const saveMethods = {
+        getItem: key => rawStorage.getItem(savePrefix + String(key)),
+        setItem: (key, value) => rawStorage.setItem(savePrefix + String(key), String(value)),
+        removeItem: key => rawStorage.removeItem(savePrefix + String(key)),
+        clear: () => { for (const key of saveKeys()) rawStorage.removeItem(savePrefix + key); },
+        key: index => saveKeys()[Number(index) >>> 0] ?? null
+      };
+      // Ruffle's WASM storage bridge uses storage[key], not only getItem/setItem.
+      // Scope this window only; never patch Storage.prototype or the parent library.
+      const saveStorage = new Proxy(Object.create(Storage.prototype), {
+        get(_target, key) {
+          if (key === "length") return saveKeys().length;
+          if (key === Symbol.toStringTag) return "Storage";
+          if (typeof key !== "string") return undefined;
+          if (Object.prototype.hasOwnProperty.call(saveMethods, key)) return saveMethods[key];
+          return saveMethods.getItem(key) ?? undefined;
+        },
+        set(_target, key, value) {
+          if (typeof key !== "string") return false;
+          saveMethods.setItem(key, value);
+          return true;
+        },
+        deleteProperty(_target, key) {
+          if (typeof key !== "string") return false;
+          saveMethods.removeItem(key);
+          return true;
+        },
+        has(_target, key) {
+          return key === "length" || Object.prototype.hasOwnProperty.call(saveMethods, key) ||
+            (typeof key === "string" && saveMethods.getItem(key) !== null);
+        },
+        ownKeys: saveKeys,
+        getOwnPropertyDescriptor(_target, key) {
+          if (typeof key !== "string") return undefined;
+          const value = saveMethods.getItem(key);
+          return value === null ? undefined :
+            { value, writable: true, enumerable: true, configurable: true };
+        },
+        defineProperty(_target, key, descriptor) {
+          if (typeof key !== "string" || !("value" in descriptor) ||
+              !descriptor.configurable || !descriptor.enumerable || !descriptor.writable) return false;
+          saveMethods.setItem(key, descriptor.value);
+          return true;
+        }
+      });
+      // Fail visibly if isolation cannot be installed; do not use shared storage as a fallback.
+      Object.defineProperty(window, "localStorage", {
+        configurable: true, enumerable: true, get: () => saveStorage
+      });
+      // END FRONTIERS SAVE ISOLATION
+
+      stage = "Ruffle script";
       window.RufflePlayer = window.RufflePlayer || {};
       window.RufflePlayer.config = {
         publicPath: ruffleBase,
