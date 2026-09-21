@@ -23,7 +23,7 @@
   <div id="status" role="status" aria-live="polite">
     <strong>Kingdom Rush Frontiers</strong>
     <span id="message">Loading Ruffle…</span>
-    <small>KRF-Ruffle 2026.09.20-r2</small>
+    <small>KRF-Ruffle 2026.09.20-r3</small>
   </div>
   <script>
   (async () => {
@@ -110,7 +110,8 @@
         scale: "showAll",
         forceScale: true,
         allowFullscreen: true,
-        allowScriptAccess: false
+        // Frontiers needs ExternalInterface when entering a save (Ruffle issue #11280).
+        allowScriptAccess: true
       };
       await new Promise((resolve, reject) => {
         const script = document.createElement("script");
