@@ -23,7 +23,7 @@
   <div id="status" role="status" aria-live="polite">
     <strong>Kingdom Rush Frontiers</strong>
     <span id="message">Loading Ruffle…</span>
-    <small>KRF-Ruffle 2026.09.20-r5-saves</small>
+    <small>KRF-Ruffle 2026.09.20-r6-campaign</small>
   </div>
   <script>
   (async () => {
@@ -62,57 +62,114 @@
         document.head.appendChild(script);
       });
 
-      // Stream directly into one final buffer; do not retain separate full-part copies.
-      const data = new Uint8Array(totalBytes);
-      let offset = 0;
+      // Inflate the four existing parts directly into one final SWF buffer.
+      // This avoids retaining an extra full-size compressed copy for the repair.
+      const originalLength = 64859117;
+      const addedBytes = 13;
+      const data = new Uint8Array(originalLength + addedBytes);
+      const abort = new AbortController();
+      const header = new Uint8Array(8);
+      let headerBytes = 0;
+      let downloaded = 0;
       let lastPercent = -1;
-      message.textContent = "Loading game: 0.0 / 58.9 MB";
-      for (const [name, expectedBytes] of parts) {
-        stage = name;
-        const response = await fetch(assetBase + name);
-        if (!response.ok) throw new Error(name + ": HTTP " + response.status);
-        if (!response.body) throw new Error(name + ": empty response body.");
-        const reader = response.body.getReader();
-        const partEnd = offset + expectedBytes;
+      const source = (async function* () {
+        for (const [name, expectedBytes] of parts) {
+          stage = name;
+          const response = await fetch(assetBase + name, { signal: abort.signal });
+          if (!response.ok) throw new Error(name + ": HTTP " + response.status);
+          if (!response.body) throw new Error(name + ": empty response body.");
+          const reader = response.body.getReader();
+          let partBytes = 0;
+          try {
+            while (true) {
+              const { done, value } = await reader.read();
+              if (done) break;
+              partBytes += value.byteLength;
+              downloaded += value.byteLength;
+              if (partBytes > expectedBytes) throw new Error(name + ": unexpected file size.");
+              let skip = 0;
+              if (headerBytes < 8) {
+                skip = Math.min(8 - headerBytes, value.length);
+                header.set(value.subarray(0, skip), headerBytes);
+                headerBytes += skip;
+                if (headerBytes === 8) {
+                  if (header[0] !== 67 || header[1] !== 87 || header[2] !== 83 ||
+                      header[3] !== 10 || new DataView(header.buffer).getUint32(4, true) !== originalLength) {
+                    throw new Error("Unexpected Frontiers SWF header.");
+                  }
+                  data.set(header);
+                }
+              }
+              const percent = Math.floor(downloaded * 100 / totalBytes);
+              if (percent !== lastPercent) {
+                lastPercent = percent;
+                message.textContent = "Loading game: " + (downloaded / 1000000).toFixed(1) + " / 58.9 MB";
+              }
+              if (skip < value.length) yield value.subarray(skip);
+            }
+          } finally {
+            reader.releaseLock();
+          }
+          if (partBytes !== expectedBytes) {
+            throw new Error(name + ": received " + partBytes + " of " + expectedBytes + " bytes.");
+          }
+        }
+      })();
+      const compressed = new ReadableStream({
+        async pull(controller) {
+          const result = await source.next();
+          if (result.done) controller.close();
+          else controller.enqueue(result.value);
+        },
+        async cancel() { abort.abort(); await source.return(); }
+      });
+      try {
+        const inflated = compressed.pipeThrough(new DecompressionStream("deflate")).getReader();
+        let offset = 8;
         while (true) {
-          const { done, value } = await reader.read();
+          const { done, value } = await inflated.read();
           if (done) break;
-          if (offset + value.byteLength > partEnd) {
-            await reader.cancel();
-            throw new Error("Response exceeds the expected " + expectedBytes + " bytes.");
-          }
+          if (offset + value.length > originalLength) throw new Error("Unexpected decoded SWF size.");
           data.set(value, offset);
-          offset += value.byteLength;
-          const percent = Math.floor(offset * 100 / totalBytes);
-          if (percent !== lastPercent) {
-            lastPercent = percent;
-            message.textContent = "Loading game: " + (offset / 1000000).toFixed(1) + " / 58.9 MB";
-          }
+          offset += value.length;
         }
-        if (offset !== partEnd) {
-          throw new Error("Received " + (expectedBytes + offset - partEnd) + " of " + expectedBytes +
-            " bytes. The response is incomplete or outdated.");
+        if (offset !== originalLength || downloaded !== totalBytes) {
+          throw new Error("Incomplete Frontiers game data.");
         }
+      } catch (error) {
+        abort.abort();
+        throw new Error(error.message || "Frontiers decompression failed (invalid data or checksum).");
       }
-      stage = "Frontiers save names";
-      // Give this exact Frontiers SWF its own SharedObject names: kfslot1/2/3.
-      // Only the downloaded buffer is changed; hosted game files stay original.
-      // First edit changes the three ABC strings through their shared compressed
-      // encoding. The other edits update zlib's Adler-32. All other decoded bytes
-      // are identical. Do not change these offsets for another SWF build.
-      const saveSlotEdits = [
-        [311050, 38, 122],
-        [58867743, 12, 85],
-        [58867744, 128, 33],
-        [58867746, 140, 104]
-      ];
-      for (const [position, expected] of saveSlotEdits) {
-        if (data[position] !== expected) {
-          throw new Error("Unexpected SWF build at byte " + position +
-            ". Keep the original krf-6dd546607ad2.part1–4 files.");
-        }
+
+      stage = "Frontiers campaign compatibility";
+      // AgiV2Handler.isLoggedIn must return false while AGI or AGI.user is absent.
+      // Preserve the original !agi.user.isGuest() result when the service exists.
+      const codeStart = 1226801;
+      const originalCode = [208, 48, 96, 134, 132, 2, 102, 225, 69, 70, 248, 93, 0, 150, 72];
+      const guardedCode = [208, 48, 96, 134, 132, 2, 42, 18, 14, 0, 0, 102, 225, 69, 42, 18, 6, 0, 0, 70, 248, 93, 0, 150, 72, 41, 39, 72];
+      const questStart = 1226544;
+      const originalQuestCheck = [96, 134, 132, 2, 102, 225, 69, 70, 248, 93, 0];
+      const guardedQuestCheck = [208, 70, 193, 168, 1, 0, 150, 2, 2, 2, 2];
+      const view = new DataView(data.buffer);
+      if (!originalQuestCheck.every((byte, i) => data[questStart + i] === byte) ||
+          !originalCode.every((byte, i) => data[codeStart + i] === byte) ||
+          data[1226796] !== 1 || data[1226800] !== originalCode.length ||
+          view.getUint32(202872, true) !== 3380847 ||
+          ![487041, 487082, 487090].every(position => data[position] === 114)) {
+        throw new Error("Unexpected SWF build. Keep the original krf-6dd546607ad2.part1–4 files.");
       }
-      for (const [position, , replacement] of saveSlotEdits) data[position] = replacement;
+      // Insert the two null checks in place. All other game method bodies remain unchanged.
+      // Achievement submission already skips guests; use the same safe login check.
+      data.set(guardedQuestCheck, questStart);
+      data.copyWithin(codeStart + guardedCode.length, codeStart + originalCode.length, originalLength);
+      data.set(guardedCode, codeStart);
+      data[1226796] = 2;
+      data[1226800] = guardedCode.length;
+      view.setUint32(202872, 3380847 + addedBytes, true);
+      // Preserve r5 save identifiers, so existing kfslot1/2/3 saves remain usable.
+      for (const position of [487041, 487082, 487090]) data[position] = 102;
+      data[0] = 70; // FWS: the bytes are already decompressed.
+      view.setUint32(4, data.length, true);
 
       stage = "Ruffle initialization";
       message.textContent = "Starting Kingdom Rush Frontiers…";
